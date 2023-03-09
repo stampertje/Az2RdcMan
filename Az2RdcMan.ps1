@@ -1,5 +1,43 @@
 #Requires -module Az.Compute, Az.Accounts, Az.Storage, Az.Resources, Az.Network
 
+<#
+.SYNOPSIS
+This script generates an XML file for the Remote Desktop Manager containing a list of Azure VMs and their private IP 
+addresses. Optionally, it can also include a second entry for the public IP address of each VM.
+
+.PARAMETER TenantID
+The Azure Active Directory Tenant ID in GUID format.
+
+.PARAMETER SubscriptionID
+The GUID of the Azure subscription to use.
+
+.PARAMETER ResourceGroupName
+The name of the resource group to process. If not specified, all VMs in the subscription will be processed.
+
+.PARAMETER RdcManfile
+The file path to the Remote Desktop Manager connection file to be generated.
+
+.PARAMETER Overwrite
+If specified, the script will overwrite an existing connection file. 
+
+.PARAMETER IncludePublicIP
+If specified, the script will also include a second entry for the public IP address of each VM.
+
+.EXAMPLE
+.\Generate-RdcManAzureVMs.ps1 -TenantID "12345678-1234-5678-abcd-1234567890ab" -SubscriptionID "12345678-1234-5678-abcd-1234567890ab" 
+-ResourceGroupName "MyResourceGroup" -RdcManfile "C:\Temp\MyConnections.rdg" -Overwrite -IncludePublicIP
+
+This example generates an XML file for the Remote Desktop Manager containing a list of VMs in the specified resource group, including their 
+private and public IP addresses. The connection file is saved to C:\Temp\MyConnections.rdg, overwriting any existing file with the same name.
+
+.NOTES
+Author: Nico van Diemen
+Date: 09-03-2023
+Version: 1.0
+#>
+
+
+
 [CmdletBinding()]
 param (
 
@@ -23,12 +61,27 @@ param (
     [string]
     $RdcManfile,
 
-    # Overwrite if file already exists. Default is update
+    # Overwrite if file already exists.
     [Parameter(Mandatory = $False)]
     [switch]
-    $Overwrite
+    $Overwrite,
 
+    # Create a second entry for the public IP if the VM has one
+    [Parameter(Mandatory =  $false)]
+    [switch]
+    $IncludePublicIP
 )
+
+
+if ((Test-Path $RdcManfile) -and (-not($Overwrite)))
+{
+  Write-Warning "The file $RdcManfile exists."
+  $confirmation = Read-Host "Do you want to continue? Type 'Yes' to continue."
+  if ($confirmation -ne "Yes") {
+    Write-Host "Script execution stopped by user" -ForegroundColor Red
+    Exit
+  }
+}
 
 
 if ((get-azcontext).subscription.id -ne $SubscriptionID)
@@ -65,12 +118,41 @@ foreach ($vm in $vmlist)
 
   #$VMArray += $vm.ResourceGroupName + ";" + $VM.name + ";" + $PrivateIPAddress
   $vmline = @{
-      "VMName" = $vm.name
-      "VMrg" = $vm.ResourceGroupName
-      "VMip" = $PrivateIPAddress
-    }
+    "VMName" = $vm.name
+    "VMrg" = $vm.ResourceGroupName
+    "VMip" = $PrivateIPAddress
+  }
+
+  $VMArray += $vmline
   
-    $VMArray += $vmline
+  If ($IncludePublicIP)
+  {
+    If ($null -ne $interface.IpConfigurations.PublicIPAddress)
+    {
+      $PublicIPName = $interface.IpConfigurations.PublicIPAddress.Id.split("/")[$interface.IpConfigurations.PublicIPAddress.Id.split("/").length-1]
+      $PublicIPObject = Get-AzPublicIpAddress -Name $PublicIPName
+
+      $PublicIpAllocationMethod = $PublicIPObject.PublicIpAllocationMethod
+      $PublicIPAddress = $PublicIPObject.IpAddress
+      
+      If ($null -ne $PublicIPObject.DnsSettings.fqdn)
+      {
+        $publicConnection = $PublicIPObject.DnsSettings.fqdn
+        $VMNamePublic = $vm.name + " [Public FQDN]" 
+      } else {
+        $publicConnection = $PublicIPAddress
+        $VMNamePublic = $vm.name + " [Public " + $PublicIpAllocationMethod + "]"
+      }
+
+      $vmlinePip += @{
+        "VMName" = $VMNamePublic
+        "VMrg" = $vm.ResourceGroupName
+        "VMip" = $publicConnection
+      }
+
+      $VMArray += $vmlinePip
+    }
+  }
 }
 
 $rglist = $VMArray.VMrg | sort-object | get-unique
