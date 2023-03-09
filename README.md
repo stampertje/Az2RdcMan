@@ -2,7 +2,7 @@
 
 This script generates an XML file for the Remote Desktop Manager containing a list of Azure VMs and their private IP addresses. Optionally, it can also include a second entry for the public IP address of each VM.
 
-## Requirements
+## Required modules
 
 - Az.Compute
 - Az.Accounts
