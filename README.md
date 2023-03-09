@@ -33,6 +33,8 @@ Get the Sysinternals Remote Desktop Connection Manager here:
 
 This example generates an XML file for the Remote Desktop Manager containing a list of VMs in the specified resource group, including their private and public IP addresses. The connection file is saved to C:\Temp\MyConnections.rdg, overwriting any existing file with the same name.
 
+<img src=./Media/RDCMan.png alt="Remote Desktop Connection Manager screenshot">
+
 ## Notes
 
 - Author: Nico van Diemen
