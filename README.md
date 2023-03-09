@@ -2,6 +2,10 @@
 
 This script generates an XML file for the Remote Desktop Manager containing a list of Azure VMs and their private IP addresses. Optionally, it can also include a second entry for the public IP address of each VM.
 
+Get the Sysinternals Remote Desktop Connection Manager here:
+- http://live.sysinternals.com/RDCMan.exe
+- https://learn.microsoft.com/en-us/sysinternals/downloads/rdcman
+
 ## Required modules
 
 - Az.Compute
