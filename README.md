@@ -1,4 +1,4 @@
-# Generate-RdcManAzureVMs.ps1
+# Az2RdcMan.ps1
 
 This script generates an XML file for the Remote Desktop Manager containing a list of Azure VMs and their private IP addresses. Optionally, it can also include a second entry for the public IP address of each VM.
 
